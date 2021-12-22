@@ -3,6 +3,55 @@
 -- **                                                                              ** --
 -- ********************************************************************************** --
 
+--[[
+░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+░_____________Final info______________░
+░-Slaves:      64                     ░
+░-Total Volume:30000                  ░
+░-Est. time:   90 min                 ░
+░-More info:   bla bla                ░
+░___________Blocks by type____________░
+░#1 : 99s+50  #7 : 99s+50  #13: 99s+50░
+░#2 : 99s+50  #8 : 99s+50  #14: 99s+50░
+░#3 : 99s+50  #9 : 99s+50  #15: 99s+50░
+░#4 : 99s+50  #10: 99s+50  #16: 99s+50░
+░#5 : 99s+50  #11: 99s+50             ░
+░#6 : 99s+50  #12: 99s+50     [Next>>]░
+░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+
+░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+░                                     ░
+░           KRUTOY TURTLE             ░
+░_____________________________________░
+░ Fill options:                       ░
+░                                     ░
+░  Pattern: Plain                     ░
+░     Size: 5 5 6                     ░
+░    Flags: mine, tidy, dock          ░
+░                                     ░
+░Help:                                ░
+░ Navigate - TAB, arrows              ░
+░ Refuel - R, Console - ~     [Next>>]░
+░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+
+░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+░__________Select pattern:____________░
+░ 1 - Plain                           ░
+░ 2 - BoxGrid                         ░
+░ 3 - MyFirstTample.vox               ░
+░                                     ░
+░                                     ░
+░                                     ░
+░                                     ░
+░                                     ░
+░                                     ░
+░                                     ░
+░                                     ░
+░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+
+
+]]
+
 KUI = {}
 KUI.__index = KUI
 
@@ -45,10 +94,10 @@ end
 
 function KUI.drawText(text, x,y, w,h, align)
   align = align or 'center'
-  
+
   -- String params
   local textLinesCount = 1 + select(2, text:gsub('\n', '\n'))
-  
+
   -- Top spaces
   local vertSpace = (h-textLinesCount)/2
   local clearLine = repeatChar(' ', w)
@@ -56,19 +105,19 @@ function KUI.drawText(text, x,y, w,h, align)
     term.setCursorPos(x, y)
     term.write(clearLine)
   end
-  
+
   -- Bottom spaces
   for _=1, math.ceil (vertSpace) do
     term.setCursorPos(x, y+h-1)
     term.write(clearLine)
-  end  
-  
-  -- Write lines 
+  end
+
+  -- Write lines
   local currLine = 0
   for l in text:gmatch('[^\r\n]+') do
     local margin = {0,0} -- Spaces from left and right
     local horisSpace = (w - #l)
-    
+
     -- Align styles
     if    (align == 'left') then
       margin = {0, horisSpace}
@@ -77,7 +126,7 @@ function KUI.drawText(text, x,y, w,h, align)
     elseif(align == 'center')then
       margin = {math.floor(horisSpace/2), math.ceil(horisSpace/2)}
     end
-    
+
     term.setCursorPos(x, y+currLine)
     term.write( repeatChar(' ',margin[1])..l..repeatChar(' ',margin[2]))
     currLine = currLine+1
@@ -88,7 +137,7 @@ end
 function KUI.drawPanel(x,y, w,h, borderStyle)
   borderStyle = borderStyle or 'standart'
   local styleArr = borderStyles[borderStyle]
-  
+
   -- Horisontal lines
   if(h > 1) then
     term.setCursorPos(x, y)
@@ -99,7 +148,7 @@ function KUI.drawPanel(x,y, w,h, borderStyle)
     term.setCursorPos(x, y);     term.write(styleArr[1])
     term.setCursorPos(x+w-1, y); term.write(styleArr[2])
   end
-  
+
   -- Vertical lines
   for i=0,h-3 do
     term.setCursorPos(x, y+i+1)
@@ -113,7 +162,7 @@ end
 -- Draw panel with text
 function KUI.drawTextPanel(text, x,y, w,h, borderStyle, align)
   KUI.drawPanel(x,y, w,h, borderStyle)
-  
+
   if borderStyle == 'none' then
     KUI.drawText(text, x,y+((h>1) and 1 or 0), w,h, align)
   else
@@ -132,16 +181,16 @@ function KUI.add(obj)
 
   -- Add additional info
   obj.center = {x=obj.x+obj.w/2, y=obj.y+obj.h/2}
-  
+
   obj.nextTab = KUI.items[1] or obj
-  if(#KUI.items >= 1) then 
-  KUI.items[#KUI.items].nextTab = obj 
+  if(#KUI.items >= 1) then
+  KUI.items[#KUI.items].nextTab = obj
   end
-  
+
   if obj.type == 'button' or obj.type == 'input' then
     obj.selectable = true
   end
-  
+
   table.insert(KUI.items, obj)
 end
 
@@ -151,13 +200,21 @@ end
 function KUI.setWindow(window, selectedId)
   KUI.items = {}
   KUI.selectedObj = nil
+  KUI.currentWindow = window
   for _,obj in pairs(window) do
     KUI.add(obj)
-    
+
     if obj.id == selectedId then KUI.selectedObj = obj end
   end
   KUI.selectedObj = KUI.selectedObj or KUI.items[1]
   KUI.draw()
+end
+
+-- ********************************************************************************** --
+-- Clears screen and write message in center
+-- ********************************************************************************** --
+function KUI.msgBox(str)
+
 end
 
 -- ********************************************************************************** --
@@ -166,7 +223,7 @@ end
 function KUI.draw()
   term.clear()
   for _,obj in pairs(KUI.items) do
-    
+
     -- Switch type
     if     obj.type == 'panel' then
       KUI.drawPanel(obj.x,obj.y, obj.w,obj.h, obj.borderStyle)
@@ -185,9 +242,9 @@ function KUI.draw()
         obj.h-obj.padding[1]-obj.padding[3],
         obj.borderStyle, obj.align)
     else
-      
+
     end
-    
+
     -- This object is selected and selectable
     if KUI.selectedObj == obj and obj.selectable == true then
       KUI.drawPanel(obj.x-1,
@@ -195,9 +252,9 @@ function KUI.draw()
                     obj.w+2+obj.padding[2]+obj.padding[4],
                     obj.h  +obj.padding[1]+obj.padding[3], 'inlineBtn')
     end
-    
+
   end
-  
+
   -- Set Cursor
   local selObj = KUI.selectedObj
   if selObj.type == 'input' then
@@ -206,17 +263,17 @@ function KUI.draw()
   else
     term.setCursorBlink(false)
   end
-  
+
   sleep(0)
 end
 
 function KUI.navigate()
   while true do
     local e, keyCode = os.pullEvent('key')
-    
+
     -- Call user-defined event
     if KUI.onKeyPressed then KUI.onKeyPressed(keyCode) end
-    
+
     -- Input line
     local selObj = KUI.selectedObj
     if selObj ~= nil and selObj.type == 'input' then
@@ -229,13 +286,13 @@ function KUI.navigate()
         KUI.draw()
       end
     end
-    
+
     if     keyCode == 200 then --UP
       KUI.prevTab()
     elseif keyCode == 203 then --LEFT
-      
+
     elseif keyCode == 205 then --RIGHT
-      
+
     elseif keyCode == 15 or keyCode == 208 then --TAB --DOWN
       KUI.nextTab()
     elseif keyCode == 28  then --ENTER

@@ -6,62 +6,55 @@
 -- **   ----------------------------------------------------                       ** --
 -- **                                                                              ** --
 -- **   Developed to use in program "KrutoyTurtle"                                 ** --
+-- **   http://computercraft.ru/topic/48-stroitelnaia-sistema-krutoyturtle/        ** --
 -- **                                                                              ** --
 -- ********************************************************************************** --
 
-local abs   = math.abs
-local pairs = pairs
-local floor = math.floor
-local time  = os.time
+-- Redefine global function for faster acces
+local abs,pairs,floor,time,insert,remove = math.abs,pairs,math.floor,os.time,table.insert,table.remove
 
--- Heuristic estimate. Notice that moving by Z axis is easyest
+-- Heuristic estimate.
 local function heuristic_cost_estimate(p1,p2)
-  return abs(p1.x-p2.x) + abs(p1.y-p2.y)*0.999 + abs(p1.z-p2.z)*0.998
+  return abs(p1.x-p2.x) + abs(p1.y-p2.y) + abs(p1.z-p2.z)
 end
 
 -- ********************************************************************************** --
 -- **                         Utils                                                ** --
 -- ********************************************************************************** --
 
-local function CopyArray(source, destination)
-  local index
-  for k,v in pairs(source) do
-      destination[k] = v
-  end
-end
-
-local function New3dArray(w,h,d, value)
-  local arr = {}
-  
-  for z=0,d-1 do
-    arr[z] = {}
-    for y=0,h-1 do
-      arr[z][y] = {}
-      if value ~= nil then
-        for x=0,w-1 do
-          arr[z][y][x] = value
+-- 3d array metatable
+-- Use arr3d() as constructor, arr(x,y,z) as acces and arr:set(x,y,z,v) as set value
+if not arr3d then arr3d = function() return setmetatable({
+  set = function(t,x,y,z,v)
+    t[z]    = t[z]    or {}
+    t[z][y] = t[z][y] or {}
+    t[z][y][x] = v
+  end,
+  setVolume = function(t, x1,y1,z1,x2,y2,z2, v)
+    for z=z1, z2 do
+      for y=y1, y2 do
+        for x=x1, x2 do
+          t:set(x,y,z, v)
         end
       end
     end
   end
-  
-  arr.size = {d,h,w}
-  arr.getLength = function(self, dimension) return self.size[dimension+1] end
-  
-  return arr
-end
+  }, { __call = function(t, x, y, z)
+    if not t[z] or not t[z][y] then return nil end
+    return t[z][y][x]
+  end
+})end end
 
-local chtime=time()
+
+-- Checking time for avoid yeld exception
+local chtime
 local function checktime()
   -- os.queueEvent("")
   -- coroutine.yield()
-  
+
   if not chtime then chtime=time() end
   local ntime=time()
-  if ntime-chtime>0.05 then
-    sleep(0)
-    chtime=ntimr
-  elseif ntime-chtime<0 then
+  if ntime-chtime>0.05 or ntime-chtime<0  then
     sleep(0)
     chtime=ntime
   end
@@ -71,12 +64,12 @@ end
 -- **                            BreadCrumb                                        ** --
 -- ********************************************************************************** --
 
-BreadCrumb = {}
+local BreadCrumb = {}
 BreadCrumb.__index = BreadCrumb
 
 function BreadCrumb.new(x,y,z, parent)
   local self = setmetatable({}, BreadCrumb)
-  self.pos = vec3(x,y,z)
+  self.pos = {x=x,y=y,z=z}
   self.next = parent
   self.cost = math.huge
   self.onClosedList = false
@@ -84,131 +77,8 @@ function BreadCrumb.new(x,y,z, parent)
   return self
 end
 
-function BreadCrumb:Equals(breadcrumb)
-    return breadcrumb.pos.x == self.pos.x and breadcrumb.pos.y == self.pos.y and breadcrumb.pos.z == self.pos.z
-end
-
-function BreadCrumb:GetHashCode()
-    return self.pos.GetHashCode()
-end
-
-function BreadCrumb:CompareTo(other)
-  if self.cost>other.cost then 
-    return 1 
-  elseif self.cost<other.cost then 
-    return -1 
-  else 
-    return 0 
-  end
-end
-
--- ********************************************************************************** --
--- **                           MinHeap                                            ** --
--- ********************************************************************************** --
-MinHeap = {}
-MinHeap.__index = MinHeap
-
-
-function MinHeap.new(_capacity)
-  local self = setmetatable({}, MinHeap)
-  self.count = 0
-  self.capacity = _capacity
-  self.array = {}
-  self.temp  = nil
-  self.mheap = nil
-  self.tempArray = nil
-  return self
-end 
-
-function MinHeap:DoubleArray()
-  self.capacity = bit.blshift(self.capacity, 1)
-  self.tempArray = {}
-  CopyArray(self.array, self.tempArray)
-  self.array = self.tempArray
-end
-
-function MinHeap:Add(item)
-  self.count = self.count+1
-  if self.count > self.capacity then
-      self:DoubleArray()
-  end
-  self.array[self.count - 1] = item
-  local pos = self.count - 1
-
-  local parentPosition = floor((pos - 1)/2)
-
-  while pos > 0 and self.array[parentPosition]:CompareTo(self.array[pos]) > 0 do
-      self.temp = self.array[pos]
-      self.array[pos] = self.array[parentPosition]
-      self.array[parentPosition] = self.temp
-      pos = parentPosition
-      parentPosition = floor((pos - 1)/2)
-  end
-end   
-  
-function MinHeap:ExtractFirst()
-  if self.count == 0 then
-      error("Heap is empty")
-  end
-  self.temp = self.array[0]
-  self.array[0] = self.array[self.count - 1]
-  self.count = self.count - 1
-  self:MinHeapify(0)
-  return self.temp
-end
-
-function MinHeap:MinHeapify(pos)
-  while true do
-    local left = pos*2 + 1
-    local right = left + 1
-    local minPosition
-
-    if left < self.count and self.array[left]:CompareTo(self.array[pos]) < 0 then
-        minPosition = left
-    else
-        minPosition = pos
-    end
-
-    if right < self.count and self.array[right]:CompareTo(self.array[minPosition]) < 0 then
-        minPosition = right
-    end
-
-    if minPosition ~= pos then
-        self.mheap = self.array[pos]
-        self.array[pos] = self.array[minPosition]
-        self.array[minPosition] = self.mheap
-        pos = minPosition
-    else
-        return
-    end
-
-  end
-end
-
--- ********************************************************************************** --
--- **                                  World                                       ** --
--- ********************************************************************************** --
-
-World = {}
-World.__index = World
-
-function World.new(width, height, depth)
-  local self = setmetatable({}, World)
-  self.blocked = New3dArray(width, height, depth, nil)
-  return self
-end
-
-function World:SizeZ () return self.blocked:getLength(0) end
-function World:SizeY () return self.blocked:getLength(1) end
-function World:SizeX () return self.blocked:getLength(2) end
-
--- Checks if a pos is free or marked (and legal)
--- return true if the pos is free
-function World:PositionIsFree(x,y,z)
-    return x >= 0 and x < self:SizeX () and
-           y >= 0 and y < self:SizeY   () and
-           z >= 0 and z < self:SizeZ  () and
-           self.blocked[z][y][x] == nil
+function BreadCrumb:Equals(b)
+    return b.pos.x == self.pos.x and b.pos.y == self.pos.y and b.pos.z == self.pos.z
 end
 
 -- ********************************************************************************** --
@@ -217,59 +87,59 @@ end
 
 -- Neigtbours of current point
 local surrounding = {
-  vec3( 1,0,0), vec3(0, 1,0), vec3(0,0, 1), 
-  vec3(-1,0,0), vec3(0,-1,0), vec3(0,0,-1)
+  {x=0,y=0,z=-1}, {x=0,y=0,z= 1}, {x=0,y=-1,z=0}, {x=0,y= 1,z=0}, {x=-1,y=0,z=0}, {x=1, y=0,z=0},
 }
 
--- Method that switfly finds the best path from p_start to end. Doesn't reverse outcome
--- The p_end breadcrump where each .next is a step back
-function FindPathReversed(world, p_start, p_end)
-  local openList = MinHeap.new(256)
-  local brWorld  = New3dArray(world:SizeX(), world:SizeY(), world:SizeZ(), nil)
-  local node
-  local cost
-  local diff
- 
+
+-- Method that switfly finds the best path from p_start to end.
+-- The starting breadcrumb traversable via .next to the end or nil if there is no path
+function AStarFindPath(world, p_start, p_end)
+    -- note we just flip p_start and end here so you don't have to.
+   p_end, p_start = p_start, p_end
+
+  -- Destination point is bloked
+  if world(p_start.x, p_start.y, p_start.z) then return end
+
+  local openList = {}
+  local brWorld  = arr3d()
+
+
   local current= BreadCrumb.new(p_start.x,p_start.y,p_start.z)
-  current.cost = 0
+  current.cost = heuristic_cost_estimate(current.pos,p_end)
 
   local finish = BreadCrumb.new(p_end.x,p_end.y,p_end.z)
-  brWorld[current.pos.z][current.pos.y][current.pos.x] = current
-  openList:Add(current)
+  brWorld:set(current.pos.x,current.pos.y,current.pos.z,current)
+  insert(openList,current)
 
-  while openList.count > 0 do
+
+  while #openList > 0 do
     --Find best item and switch it to the 'closedList'
-    current = openList:ExtractFirst()
+    current = remove(openList)
     current.onClosedList = true
 
     --Find neighbours
     for k,v in pairs(surrounding) do
       local tmpX,tmpY,tmpZ = current.pos.x + v.x, current.pos.y + v.y, current.pos.z + v.z
-      if world:PositionIsFree(tmpX,tmpY,tmpZ) then
+      if not world(tmpX,tmpY,tmpZ) then
         --Check if we've already examined a neighbour, if not create a new node for it.
-        if brWorld[tmpZ][tmpY][tmpX] == nil then
+        local node
+        if brWorld(tmpX,tmpY,tmpZ) == nil then
           node = BreadCrumb.new(tmpX,tmpY,tmpZ)
-          brWorld[tmpZ][tmpY][tmpX] = node
+          brWorld:set(tmpX,tmpY,tmpZ,node)
         else
-          node = brWorld[tmpZ][tmpY][tmpX]
+          node = brWorld(tmpX,tmpY,tmpZ)
         end
-        
+
         --If the node is not on the 'closedList' check it's new score, keep the best
         if node.onClosedList == false then
-        
-          diff = 0
-          if current.pos.x ~= node.pos.x then diff = diff+1 end
-          if current.pos.y ~= node.pos.y then diff = diff+1 end
-          if current.pos.z ~= node.pos.z then diff = diff+1 end
-          
-          cost = current.cost + diff + heuristic_cost_estimate(node.pos,p_end)
+          local cost = heuristic_cost_estimate(node.pos,p_end)
 
           if cost < node.cost then
             node.cost = cost
             node.next = current
           end
 
-          --If the node wasn't on the openList yet, add it 
+          --If the node wasn't on the openList yet, add it
           if node.onOpenList == false then
             --Check to see if we're done
             if node:Equals(finish) == true then
@@ -277,40 +147,51 @@ function FindPathReversed(world, p_start, p_end)
               return node
             end
             node.onOpenList = true
-            openList:Add(node)
-          end         
+
+            -- Sort and add to open list
+            local pos = #openList
+            while pos > 0 and openList[pos].cost <= node.cost do
+                pos = pos - 1
+            end
+            insert(openList,pos+1,node)
+          end
         end
       end
     end
-    
     checktime() -- Check yelding time for computerCraft
   end
-  
+
   return nil --no path found
 end
 
--- Method that switfly finds the best path from p_start to end.
--- The starting breadcrumb traversable via .next to the end or nil if there is no path
-function AStarFindPath(world, p_start, p_end)
-    -- note we just flip p_start and end here so you don't have to.            
-    return FindPathReversed(world, p_end, p_start)
-end
 
 -- ********************************************************************************** --
 -- **                              Usage                                           ** --
 -- ********************************************************************************** --
 
---[[--
 
--- Create new world as 3d array, filled by nil's. sizes by X,Y,Z
-local world = World.new(10,10,10)  
+--[[
+-- Create new world as 3d array
+local world = arr3d()
 
 -- Block a cell, make it impassable. Indexes from [0]
--- Indexes is [z][y][x]
-world.blocked[0][3][9] = true
+-- Indexes is [x][y][z]
+--world:setVolume(0,0,0,9,9,0,true)
+--world:setVolume(0,0,9,9,9,9,true)
 
-local p_start = vec3()      -- Start point.
-local p_end   = vec3(7,8,9) -- End point
+--world:setVolume(0,0,0,9,0,9,true)
+--world:setVolume(0,9,0,9,9,9,true)
+
+--world:setVolume(0,0,0,0,9,9,true)
+--world:setVolume(9,0,0,9,9,9,true)
+world:set(1,3,1,true)
+world:set(1,7,1,true)
+world:setVolume(-1,5,-1,3,5,3,true)
+world:set(1,5,1,nil)
+
+
+local p_start = {x=1,y=9,z=1} -- Start point.
+local p_end   = {x=1,y=1,z=1} -- End point
 
 -- Main path find function
 -- Return the first bread crumb of path
@@ -319,15 +200,12 @@ local crumb = AStarFindPath(world, p_start, p_end)
 if crumb == nil then
   print('Path not found')
 else
-  print('Start: ' .. crumb.pos.x..","..crumb.pos.y..","..crumb.pos.z)
-  
+  io.write('['.. crumb.pos.x..","..crumb.pos.y..","..crumb.pos.z.."]->")
+
   -- BreadCrumbs is connected list. To get next point in path use crumb.next
   while crumb.next ~= nil do
     crumb = crumb.next
-    print('Route: '.. crumb.pos.x..","..crumb.pos.y..","..crumb.pos.z)
+    io.write('['.. crumb.pos.x..","..crumb.pos.y..","..crumb.pos.z..(crumb.next and "]->" or "]"))
   end
-  
-  print('Finish: ' .. crumb.pos.x..","..crumb.pos.y..","..crumb.pos.z)
 end
-
---]]--
+--]]

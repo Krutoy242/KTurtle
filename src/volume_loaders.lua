@@ -63,13 +63,11 @@ function volumeLoader.load_vox(path)
   readBString(bFile, 8) -- Dont know what this two numbers means.
   local numVoxels= readBInt(bFile)
   
-  local vol = {}
+  local vol = arr3d()
   for j=1, numVoxels do
     local x,y,z,i = bFile.read(),bFile.read(),bFile.read(),bFile.read()
     
-    vol[z+1]           = vol[z+1]      or {}
-    vol[z+1][y+1]      = vol[z+1][y+1] or {}
-    vol[z+1][y+1][x+1] = i
+    vol:set(x+1,y+1,z+1, i)
   end
   bFile.close()
   
@@ -86,8 +84,9 @@ function volumeLoader.load_nfa(path)
     return nil
   end
   
-  local vol = { }
-  vol[1] = { }
+  local vol = arr3d()
+  
+  local sizeX,sizeY,sizeZ = 1,1,1
   
   local file = io.open(path, "r" )
   local sLine = file:read()
@@ -96,20 +95,21 @@ function volumeLoader.load_nfa(path)
   while sLine do
     if sLine == "~" then
       z = z + 1
-      vol[z] = {}
+      sizeZ = math.max(sizeZ, z)
       y = 1
     else
-      vol[z][y] = vol[z][y] or {}
       local x=1
       for i=1,#sLine do
-        vol[z][y][x] = tonumber(string.sub(sLine,i,i), 16)
+        vol:set(x,y,z, tonumber(string.sub(sLine,i,i), 16))
+        sizeX = math.max(sizeX, x)
         x=x+1
       end
+      sizeY = math.max(sizeY, y)
       y = y+1
     end
     sLine = file:read()
   end
   file:close()
   
-  return vol
+  return vol, sizeX, sizeY, sizeZ
 end
