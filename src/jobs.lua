@@ -246,7 +246,7 @@ function jobs.fill(...)
   
   -- Make array representing how much blocks each type we need to place
   -- Each time block placed value will be decremented
-  local totalBlockByIndexLeft = {}
+  local totalBlockByIndexLeft = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0}
   for k,v in ipairs(stats.totalBlockByIndex) do totalBlockByIndexLeft[k] = v end
   
   -- We need to create array with cells where we already was, and then not need to dig
