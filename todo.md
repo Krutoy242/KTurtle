@@ -1,0 +1,5 @@
+- Add https://github.com/IgorTimofeev/AdvancedLua/blob/master/AdvancedLua.lua
+- Add https://computercraft.ru/topic/3663-parg-parsim-argumenty-iz-komandnoy-stroki/
+- Add https://computercraft.ru/topic/4099-umfal-avtomaticheskiy-zagruzchik-moduley-dlya-slozhnyh-prilozheniy/
+- Add http://www.computercraft.info/forums2/index.php?/topic/29920-simple-github-util/
+- Add http://www.computercraft.info/forums2/index.php?/topic/29811-empam-extensible-modular-package-manager-v010/
